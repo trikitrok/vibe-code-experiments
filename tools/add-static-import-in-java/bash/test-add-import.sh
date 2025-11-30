@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# test-add-static-import.sh — bashunit tests for dev/add-static-import.sh
+# test-add-import.sh — bashunit tests for dev/add-static-import.sh (class imports)
 #
-# This test suite validates:
+# This test suite validates adding regular class imports (non-static):
 # 1) Adding an import that does not already exist in the Java class
 # 2) Not duplicating an import that already exists in the Java class (idempotency)
 #
 # It is written for https://github.com/TypedDevs/bashunit
 # To run:
 #   - Using vendored bashunit (recommended):
-#       dev/lib/bashunit dev/test-add-static-import.sh
+#       dev/lib/bashunit dev/test-add-import.sh
 #   - Or simply execute:
-#       dev/test-add-static-import.sh
+#       dev/test-add-import.sh
 #     which will invoke the vendored runner internally.
 #
 # Verbose mode:
@@ -25,9 +25,9 @@ set -euo pipefail
 # Resolve this script directory robustly both when executed directly and when sourced by bashunit
 _THIS_FILE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$_THIS_FILE")" && pwd)
-ADD_SCRIPT="$SCRIPT_DIR/add-static-import.sh"
-METHOD_FQN="org.assertj.core.api.Assertions.assertThat"
-IMPORT_LINE="import static ${METHOD_FQN};"
+ADD_SCRIPT="$SCRIPT_DIR/add-import.sh"
+CLASS_FQN="java.util.List"
+IMPORT_LINE="import ${CLASS_FQN};"
 
 # --- bashunit bootstrap (vendored only) ---
 RUN_BASHUNIT="$SCRIPT_DIR/lib/bashunit"
@@ -38,7 +38,7 @@ if [ ! -x "$RUN_BASHUNIT" ]; then
 fi
 
 # --- guards ---
-[ -x "$ADD_SCRIPT" ] || { echo "[FATAL] add-static-import.sh not found or not executable at $ADD_SCRIPT" >&2; exit 1; }
+[ -x "$ADD_SCRIPT" ] || { echo "[FATAL] add-import.sh not found or not executable at $ADD_SCRIPT" >&2; exit 1; }
 
 # --- test fixtures ---
 # Verbose mode: when enabled, tests print the Java file contents before and after modification
@@ -50,7 +50,7 @@ VERBOSE_AFTER=""
 
 TMP_ROOT=""
 set_up() {
-  TMP_ROOT=$(mktemp -d "add-static-import-tests.XXXXXX")
+  TMP_ROOT=$(mktemp -d "add-import-tests.XXXXXX")
   VERBOSE_FILE=""
   VERBOSE_BEFORE=""
   VERBOSE_AFTER=""
@@ -80,21 +80,11 @@ create_java_file() {
   } > "$path"
 }
 
-print_file_with_header() {
-  local title="$1" file="$2"
-  {
-    echo "----- $title: $file -----"
-    cat "$file"
-    echo "----- end of $title: $file -----"
-  } >&2
-}
-
 print_content_with_header() {
   # Prints provided content with headers; used in tear_down so output is visible under bashunit
   local title="$1" file="$2" content="$3"
   {
     echo "----- $title: $file -----"
-    # Use printf to preserve newlines exactly
     printf "%s\n" "$content"
     echo "----- end of $title: $file -----"
   }
@@ -126,7 +116,8 @@ line_no_of() {
 }
 
 run_add() {
-  "$ADD_SCRIPT" -m "$METHOD_FQN" "$1"
+  # default mode (class import): provide FQN then file
+  "$ADD_SCRIPT" "$CLASS_FQN" "$1"
 }
 
 is_verbose() {
@@ -135,7 +126,7 @@ is_verbose() {
 
 # --- tests ---
 
-test_adds_import_when_missing() {
+test_adds_class_import_when_missing() {
   local file="$TMP_ROOT/MissingImport.java"
   create_java_file "com.example" "MissingImport" "$file"
 
@@ -162,19 +153,19 @@ test_adds_import_when_missing() {
   # Ensure ordering: package < import < class
   local pkg_line imp_line class_line
   pkg_line=$(line_no_of '^package ' "$file")
-  imp_line=$(line_no_of '^import static ' "$file")
+  imp_line=$(line_no_of '^import ' "$file")
   class_line=$(line_no_of '^public class ' "$file")
 
-  [[ "$pkg_line" -gt 0 ]] || fail "package line not found"
-  [[ "$imp_line" -gt 0 ]] || fail "import line not found"
-  [[ "$class_line" -gt 0 ]] || fail "class line not found"
+  [[ "$pkg_line" -gt 0 ]] || { echo "package line not found" >&2; return 1; }
+  [[ "$imp_line" -gt 0 ]] || { echo "import line not found" >&2; return 1; }
+  [[ "$class_line" -gt 0 ]] || { echo "class line not found" >&2; return 1; }
 
-  [[ "$imp_line" -gt "$pkg_line" ]] || fail "import should appear after package"
-  [[ "$imp_line" -lt "$class_line" ]] || fail "import should appear before class declaration"
+  [[ "$imp_line" -gt "$pkg_line" ]] || { echo "import should appear after package" >&2; return 1; }
+  [[ "$imp_line" -lt "$class_line" ]] || { echo "import should appear before class declaration" >&2; return 1; }
 }
 
 
-test_idempotent_when_import_already_exists() {
+test_idempotent_when_class_import_already_exists() {
   local file="$TMP_ROOT/AlreadyHasImport.java"
   add_existing_import_to_file "$file"
 
@@ -185,7 +176,7 @@ test_idempotent_when_import_already_exists() {
 
   local before_count
   before_count=$(occurrences_of_import "$file")
-  assert_equals 1 "$before_count"
+  [[ "$before_count" -eq 1 ]] || { echo "expected initial import occurrence to be 1" >&2; return 1; }
 
   local out
   out=$(run_add "$file")
@@ -194,11 +185,11 @@ test_idempotent_when_import_already_exists() {
     VERBOSE_AFTER="$(cat "$file")"
   fi
 
-  assert_match "\\[INFO\\] Import already present in $file — skipping" "$out"
+  [[ "$out" == *"[INFO] Import already present in $file — skipping"* ]] || { echo "expected idempotent skip message" >&2; return 1; }
 
   local after_count
   after_count=$(occurrences_of_import "$file")
-  assert_equals 1 "$after_count"
+  [[ "$after_count" -eq 1 ]] || { echo "expected 1 occurrence of import after run, got $after_count" >&2; return 1; }
 }
 
 # --- run ---

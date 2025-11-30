@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# dev/python/pytest — run pytest from the local dev/python virtualenv (./dev/python/.venv)
+#
+# Ensures isolation: installs nothing system-wide. If the venv is missing,
+# prints guidance to run dev/python/setup-python-dev.sh.
+set -euo pipefail
+
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")/../.." && pwd)
+PY_DEV_DIR="$ROOT_DIR/dev/python"
+VENV_DIR="$PY_DEV_DIR/.venv"
+PYTEST_BIN="$VENV_DIR/bin/pytest"
+
+if [[ ! -x "$PYTEST_BIN" ]]; then
+  echo "[ERROR] Pytest not found at $PYTEST_BIN" >&2
+  echo "        Run: dev/python/setup-python-dev.sh" >&2
+  echo "        Then re-run: dev/python/pytest [args...]" >&2
+  exit 1
+fi
+exec "$PYTEST_BIN" "$@"

@@ -1,0 +1,10 @@
+# Developer-only Python tools for scripts and tests under dev/python
+# Created by setup-python-dev.sh; install with:
+#   python3 -m venv dev/python/.venv
+#   dev/python/.venv/bin/pip install -r dev/python/requirements-dev.txt
+
+# Test runner
+pytest>=7.0,<9.0
+
+# CLI library used by add-import.py
+click>=8.0,<9.0

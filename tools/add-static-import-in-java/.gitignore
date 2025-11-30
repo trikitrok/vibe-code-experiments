@@ -1,0 +1,69 @@
+# .gitignore for Python tooling under ./dev
+# This only applies to files inside the dev/ directory.
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments (project-local tooling)
+.venv/
+venv/
+env/
+ENV/
+.python-version
+# Specific venv used by dev/python scripts
+python/.venv/
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+wheels/
+share/python-wheels/
+.installed.cfg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports and caches
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+.pytest_cache/
+pytestdebug.log
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Type checker caches
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Jupyter/IPython
+.ipynb_checkpoints/
+
+# Cython debug symbols
+cython_debug/
+
+# OS / editor noise
+.DS_Store
